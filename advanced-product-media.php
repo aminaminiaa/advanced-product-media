@@ -31,7 +31,6 @@ add_action('admin_init', 'apm_check_woocommerce');
 
 // Allow video and audio upload with security checks
 function apm_allow_video_audio_upload($mimes) {
-    // Only allow specific safe formats
     $allowed_mimes = array(
         'mp4'  => 'video/mp4',
         'webm' => 'video/webm',
@@ -54,7 +53,6 @@ function apm_check_file_type($file) {
     $mime_type = $file_info['type'];
     
     if (in_array($extension, $allowed_extensions) && in_array($mime_type, $allowed_mime_types)) {
-        // Verify actual file content matches mime type
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $real_mime = finfo_file($finfo, $file['tmp_name']);
         finfo_close($finfo);
@@ -84,7 +82,6 @@ function apm_get_placeholder_url($type) {
         return APM_URL . 'assets/' . $file;
     }
     
-    // Fallback to WooCommerce placeholder
     return wc_placeholder_img_src();
 }
 
@@ -160,7 +157,7 @@ function apm_generate_media_thumbnail($metadata, $attachment_id) {
 }
 add_filter('wp_generate_attachment_metadata', 'apm_generate_media_thumbnail', 10, 2);
 
-// Fix attachment image src
+// Fix attachment image src - این برای نمایش thumbnail ها استفاده میشه
 function apm_fix_attachment_image_src($image, $attachment_id, $size) {
     $attachment_id = absint($attachment_id);
     $mime_type = get_post_mime_type($attachment_id);
@@ -264,21 +261,17 @@ function apm_allow_all_media_in_featured_image() {
         return;
     }
     
-    // Add nonce for security
     wp_nonce_field('apm_media_security', 'apm_media_nonce');
     ?>
     <script type="text/javascript">
     jQuery(document).ready(function($) {
         if (typeof wp !== 'undefined' && wp.media && wp.media.view) {
-            // Store original frame
             var originalMediaFrame = wp.media.view.MediaFrame.Select;
             
-            // Extend media frame
             wp.media.view.MediaFrame.Select = originalMediaFrame.extend({
                 initialize: function() {
                     originalMediaFrame.prototype.initialize.apply(this, arguments);
                     
-                    // Allow all media types
                     this.on('content:render:browse', function(view) {
                         if (view.collection && view.collection.props) {
                             view.collection.props.set({type: ''});
@@ -287,7 +280,6 @@ function apm_allow_all_media_in_featured_image() {
                 }
             });
             
-            // Handle featured image click
             $(document).on('click', '#set-post-thumbnail', function(e) {
                 var featuredImageFrame = wp.media.featuredImage.frame();
                 
@@ -316,9 +308,7 @@ function apm_filter_media_library($query) {
         return $query;
     }
     
-    // Verify nonce
     if (isset($_POST['action']) && $_POST['action'] === 'query-attachments') {
-        // Check if this is for a product
         if (isset($_POST['post_id'])) {
             $post_id = absint($_POST['post_id']);
             $post = get_post($post_id);
@@ -333,7 +323,7 @@ function apm_filter_media_library($query) {
 }
 add_filter('ajax_query_attachments_args', 'apm_filter_media_library', 999);
 
-// Replace product main image
+// Replace main product image with video/audio
 function apm_replace_product_main_image($html) {
     global $product;
     
@@ -360,27 +350,29 @@ function apm_replace_product_main_image($html) {
         return $html;
     }
     
+    $file_url = esc_url($file_url);
+    
     if (strpos($mime_type, 'video') !== false) {
         $html = sprintf(
             '<div class="woocommerce-product-gallery__image">
-                <video controls preload="metadata" style="width:100%%; max-width:100%%; height:auto;">
+                <video controls preload="metadata" style="width: 100%%; height: auto;">
                     <source src="%s" type="%s">
                     %s
                 </video>
             </div>',
-            esc_url($file_url),
+            $file_url,
             esc_attr($mime_type),
             esc_html__('Your browser does not support the video tag.', 'advanced-product-media')
         );
     } elseif (strpos($mime_type, 'audio') !== false) {
         $html = sprintf(
-            '<div class="woocommerce-product-gallery__image">
-                <audio controls preload="metadata" style="width:100%%; max-width:100%%;">
+            '<div class="woocommerce-product-gallery__image" style="display: flex; align-items: center; justify-content: center; min-height: 300px; background: #f5f5f5;">
+                <audio controls preload="metadata" style="width: 100%%; max-width: 500px;">
                     <source src="%s" type="%s">
                     %s
                 </audio>
             </div>',
-            esc_url($file_url),
+            $file_url,
             esc_attr($mime_type),
             esc_html__('Your browser does not support the audio tag.', 'advanced-product-media')
         );
@@ -390,8 +382,8 @@ function apm_replace_product_main_image($html) {
 }
 add_filter('woocommerce_single_product_image_html', 'apm_replace_product_main_image', 10, 1);
 
-// Replace gallery images
-function apm_replace_gallery_images($html, $attachment_id) {
+// Replace gallery images with video/audio
+function apm_replace_gallery_image($html, $attachment_id) {
     $attachment_id = absint($attachment_id);
     $mime_type = get_post_mime_type($attachment_id);
     
@@ -405,27 +397,29 @@ function apm_replace_gallery_images($html, $attachment_id) {
         return $html;
     }
     
+    $file_url = esc_url($file_url);
+    
     if (strpos($mime_type, 'video') !== false) {
         $html = sprintf(
             '<div class="woocommerce-product-gallery__image">
-                <video controls preload="metadata" style="width:100%%; max-width:100%%; height:auto;">
+                <video controls preload="metadata" style="width: 100%%; height: auto;">
                     <source src="%s" type="%s">
                     %s
                 </video>
             </div>',
-            esc_url($file_url),
+            $file_url,
             esc_attr($mime_type),
             esc_html__('Your browser does not support the video tag.', 'advanced-product-media')
         );
     } elseif (strpos($mime_type, 'audio') !== false) {
         $html = sprintf(
-            '<div class="woocommerce-product-gallery__image">
-                <audio controls preload="metadata" style="width:100%%; max-width:100%%;">
+            '<div class="woocommerce-product-gallery__image" style="display: flex; align-items: center; justify-content: center; min-height: 300px; background: #f5f5f5;">
+                <audio controls preload="metadata" style="width: 100%%; max-width: 500px;">
                     <source src="%s" type="%s">
                     %s
                 </audio>
             </div>',
-            esc_url($file_url),
+            $file_url,
             esc_attr($mime_type),
             esc_html__('Your browser does not support the audio tag.', 'advanced-product-media')
         );
@@ -433,23 +427,4 @@ function apm_replace_gallery_images($html, $attachment_id) {
     
     return $html;
 }
-add_filter('woocommerce_single_product_image_thumbnail_html', 'apm_replace_gallery_images', 10, 2);
-
-// Add CSS for better media display
-function apm_add_frontend_styles() {
-    if (is_product()) {
-        ?>
-        <style type="text/css">
-            .woocommerce-product-gallery__image video,
-            .woocommerce-product-gallery__image audio {
-                display: block;
-                margin: 0 auto;
-            }
-            .woocommerce-product-gallery__image video {
-                background: #000;
-            }
-        </style>
-        <?php
-    }
-}
-add_action('wp_head', 'apm_add_frontend_styles');
+add_filter('woocommerce_single_product_image_thumbnail_html', 'apm_replace_gallery_image', 10, 2);
