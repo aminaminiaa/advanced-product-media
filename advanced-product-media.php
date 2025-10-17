@@ -312,3 +312,27 @@ function custom_codes_end_output_buffer() {
     }
 }
 add_action('shutdown', 'custom_codes_end_output_buffer', 999);
+
+function custom_codes_media_playback_control() {
+    if (!is_product()) {
+        return;
+    }
+    ?>
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            var mediaElements = document.querySelectorAll('.woocommerce-product-gallery video, .woocommerce-product-gallery audio');
+            
+            mediaElements.forEach(function(media) {
+                media.addEventListener('play', function() {
+                    mediaElements.forEach(function(otherMedia) {
+                        if (otherMedia !== media && !otherMedia.paused) {
+                            otherMedia.pause();
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+    <?php
+}
+add_action('wp_footer', 'custom_codes_media_playback_control', 999);
