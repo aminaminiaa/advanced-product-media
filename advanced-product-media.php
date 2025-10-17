@@ -159,6 +159,60 @@ function custom_codes_fix_attachment_metadata($data, $attachment_id) {
 }
 add_filter('wp_get_attachment_metadata', 'custom_codes_fix_attachment_metadata', 10, 2);
 
+function custom_codes_allow_all_media_in_featured_image() {
+    $screen = get_current_screen();
+    if ($screen && $screen->id === 'product') {
+        ?>
+        <script type="text/javascript">
+            jQuery(document).ready(function($) {
+                if (typeof wp !== 'undefined' && wp.media && wp.media.view) {
+                    var originalMediaFrameSelect = wp.media.view.MediaFrame.Select;
+                    wp.media.view.MediaFrame.Select = originalMediaFrameSelect.extend({
+                        initialize: function() {
+                            originalMediaFrameSelect.prototype.initialize.apply(this, arguments);
+                            this.on('content:render:browse', function(view) {
+                                if (view.collection) {
+                                    view.collection.props.set({type: ''});
+                                }
+                            });
+                        }
+                    });
+                    
+                    $(document).on('click', '#set-post-thumbnail', function(e) {
+                        var frame = wp.media.frames.file_frame;
+                        if (frame) {
+                            frame.off('open');
+                        }
+                        
+                        wp.media.featuredImage.frame().on('open', function() {
+                            var selection = wp.media.featuredImage.frame().state().get('selection');
+                            var library = wp.media.featuredImage.frame().state().get('library');
+                            if (library) {
+                                library.props.set({type: ''});
+                            }
+                        });
+                    });
+                }
+            });
+        </script>
+        <?php
+    }
+}
+add_action('admin_footer', 'custom_codes_allow_all_media_in_featured_image');
+
+function custom_codes_filter_media_library($query) {
+    if (is_admin() && isset($_POST['action']) && $_POST['action'] === 'query-attachments') {
+        if (isset($_POST['post_id'])) {
+            $post = get_post($_POST['post_id']);
+            if ($post && $post->post_type === 'product') {
+                unset($query['post_mime_type']);
+            }
+        }
+    }
+    return $query;
+}
+add_filter('ajax_query_attachments_args', 'custom_codes_filter_media_library', 999);
+
 function custom_codes_replace_product_main_image($html) {
     global $product;
     
@@ -173,10 +227,10 @@ function custom_codes_replace_product_main_image($html) {
         
         if (strpos($mime_type, 'video') !== false) {
             $file_url = wp_get_attachment_url($thumbnail_id);
-            return '<div class="woocommerce-product-gallery__image"><video controls style="width:100%; max-width:100%; height:auto;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '">Your browser does not support the video tag.</video></div>';
+            return '<div class="woocommerce-product-gallery__image"><video controls preload="metadata" style="width:100%; max-width:100%; height:auto;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '">Your browser does not support the video tag.</video></div>';
         } elseif (strpos($mime_type, 'audio') !== false) {
             $file_url = wp_get_attachment_url($thumbnail_id);
-            return '<div class="woocommerce-product-gallery__image"><audio controls style="width:100%; max-width:100%;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '">Your browser does not support the audio tag.</audio></div>';
+            return '<div class="woocommerce-product-gallery__image"><audio controls preload="metadata" style="width:100%; max-width:100%;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '">Your browser does not support the audio tag.</audio></div>';
         }
     }
     
@@ -189,10 +243,10 @@ function custom_codes_replace_gallery_images($html, $attachment_id) {
     
     if (strpos($mime_type, 'video') !== false) {
         $file_url = wp_get_attachment_url($attachment_id);
-        return '<div class="woocommerce-product-gallery__image"><video controls style="width:100%; max-width:100%; height:auto;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '">Your browser does not support the video tag.</video></div>';
+        return '<div class="woocommerce-product-gallery__image"><video controls preload="metadata" style="width:100%; max-width:100%; height:auto;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '">Your browser does not support the video tag.</video></div>';
     } elseif (strpos($mime_type, 'audio') !== false) {
         $file_url = wp_get_attachment_url($attachment_id);
-        return '<div class="woocommerce-product-gallery__image"><audio controls style="width:100%; max-width:100%;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '">Your browser does not support the audio tag.</audio></div>';
+        return '<div class="woocommerce-product-gallery__image"><audio controls preload="metadata" style="width:100%; max-width:100%;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '">Your browser does not support the audio tag.</audio></div>';
     }
     
     return $html;
