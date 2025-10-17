@@ -292,13 +292,15 @@ function custom_codes_replace_media_in_output($buffer) {
         $pattern = '/<div[^>]*class="[^"]*woocommerce-product-gallery__image[^"]*"[^>]*>\s*<a[^>]*href="[^"]*' . preg_quote(basename($data['url']), '/') . '[^"]*"[^>]*>.*?<\/a>\s*<\/div>/s';
         $buffer = preg_replace($pattern, '<div class="woocommerce-product-gallery__image">' . $data['media_tag'] . '</div>', $buffer);
         
-        $pattern = '/<img[^>]*src="[^"]*' . preg_quote(basename($data['placeholder']), '/') . '[^"]*"[^>]*>/';
-        $buffer = preg_replace_callback($pattern, function($matches) use ($data) {
-            if (strpos($matches[0], 'flex-control-thumbs') === false && strpos($matches[0], 'class="flex-active"') === false) {
-                return $data['media_tag'];
-            }
-            return $matches[0];
-        }, $buffer);
+        $escaped_placeholder = preg_quote($data['placeholder'], '/');
+        $pattern = '/<a[^>]*href="[^"]*"[^>]*>\s*<img[^>]*src="[^"]*' . preg_quote(basename($data['placeholder']), '/') . '[^"]*"[^>]*>\s*<\/a>/s';
+        $buffer = preg_replace($pattern, $data['media_tag'], $buffer);
+        
+        $buffer = preg_replace(
+            '/<a[^>]*class="[^"]*woocommerce-product-gallery__trigger[^"]*"[^>]*>.*?<\/a>/s',
+            '',
+            $buffer
+        );
     }
     
     return $buffer;
