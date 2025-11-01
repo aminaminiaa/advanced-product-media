@@ -15,9 +15,6 @@ define('APM_VERSION', '1.1.0');
 define('APM_PATH', plugin_dir_path(__FILE__));
 define('APM_URL', plugin_dir_url(__FILE__));
 
-/**
- * Ensure WooCommerce is active
- */
 function apm_check_woocommerce() {
     if (!class_exists('WooCommerce')) {
         deactivate_plugins(plugin_basename(__FILE__));
@@ -26,9 +23,6 @@ function apm_check_woocommerce() {
 }
 add_action('admin_init', 'apm_check_woocommerce');
 
-/**
- * Allow video/audio uploads to Media Library
- */
 function apm_allow_video_audio_upload($mimes) {
     $mimes['mp4']  = 'video/mp4';
     $mimes['webm'] = 'video/webm';
@@ -40,9 +34,6 @@ function apm_allow_video_audio_upload($mimes) {
 }
 add_filter('upload_mimes', 'apm_allow_video_audio_upload');
 
-/**
- * Placeholder helpers (make sure assets/vid.png and assets/mus.png exist)
- */
 function apm_get_placeholder_url($type) {
     if ($type === 'video') {
         return APM_URL . 'assets/vid.png';
@@ -59,9 +50,6 @@ function apm_get_placeholder_path($type) {
     }
 }
 
-/**
- * Generate metadata for non-image attachments with placeholder sizes
- */
 function apm_generate_media_thumbnail($metadata, $attachment_id) {
     $mime_type = get_post_mime_type($attachment_id);
     if (!$mime_type) {
@@ -109,7 +97,6 @@ function apm_generate_media_thumbnail($metadata, $attachment_id) {
         );
     }
 
-    // New meta key with short prefix; keep old for backward compatibility if needed
     update_post_meta($attachment_id, '_apm_media_type', $type);
     if (!get_post_meta($attachment_id, '_wp_attachment_image_alt', true)) {
         update_post_meta($attachment_id, '_wp_attachment_image_alt', ucfirst($type) . ' file');
@@ -119,9 +106,6 @@ function apm_generate_media_thumbnail($metadata, $attachment_id) {
 }
 add_filter('wp_generate_attachment_metadata', 'apm_generate_media_thumbnail', 10, 2);
 
-/**
- * Ensure image src for audio/video returns placeholder image
- */
 function apm_fix_attachment_image_src($image, $attachment_id, $size) {
     $mime_type = get_post_mime_type($attachment_id);
     if (!$mime_type) {
@@ -150,9 +134,6 @@ function apm_fix_attachment_image_src($image, $attachment_id, $size) {
 }
 add_filter('wp_get_attachment_image_src', 'apm_fix_attachment_image_src', 10, 3);
 
-/**
- * Replace featured image HTML for audio/video with placeholder <img>
- */
 function apm_fix_post_thumbnail_html($html, $post_id, $post_thumbnail_id) {
     if (!$post_thumbnail_id) {
         return $html;
@@ -174,9 +155,6 @@ function apm_fix_post_thumbnail_html($html, $post_id, $post_thumbnail_id) {
 }
 add_filter('post_thumbnail_html', 'apm_fix_post_thumbnail_html', 10, 3);
 
-/**
- * Fix attachment metadata width/height for audio/video
- */
 function apm_fix_attachment_metadata($data, $attachment_id) {
     $mime_type = get_post_mime_type($attachment_id);
     if (!$mime_type) {
@@ -203,9 +181,6 @@ function apm_fix_attachment_metadata($data, $attachment_id) {
 }
 add_filter('wp_get_attachment_metadata', 'apm_fix_attachment_metadata', 10, 2);
 
-/**
- * Prepare attachment for JS in Media Library to ensure preview shows
- */
 function apm_prepare_attachment_for_js($response, $attachment, $meta) {
     $mime_type = get_post_mime_type($attachment->ID);
     if (!$mime_type) {
@@ -227,7 +202,6 @@ function apm_prepare_attachment_for_js($response, $attachment, $meta) {
     if (file_exists($placeholder_path)) {
         $image_size = @getimagesize($placeholder_path);
         if ($image_size) {
-            // Ensure grid has something to render
             $response['sizes'] = isset($response['sizes']) && is_array($response['sizes']) ? $response['sizes'] : array();
             $response['sizes']['thumbnail'] = array(
                 'url'    => $placeholder_url,
@@ -244,9 +218,6 @@ function apm_prepare_attachment_for_js($response, $attachment, $meta) {
 }
 add_filter('wp_prepare_attachment_for_js', 'apm_prepare_attachment_for_js', 10, 3);
 
-/**
- * Admin: Allow all media types in Featured Image and WooCommerce Product Gallery
- */
 function apm_allow_all_media_in_featured_image() {
     if (!function_exists('get_current_screen')) {
         return;
@@ -280,7 +251,6 @@ function apm_allow_all_media_in_featured_image() {
             } catch(e){}
         }
 
-        // Featured Image frame
         if (wp.media.featuredImage && typeof wp.media.featuredImage.frame === 'function') {
             var fiFrame = wp.media.featuredImage.frame();
             fiFrame.on('open', function(){
@@ -288,7 +258,6 @@ function apm_allow_all_media_in_featured_image() {
             });
         }
 
-        // WooCommerce Product Gallery frame
         function hookWooGalleryFrame() {
             if (wp.media.frames && wp.media.frames.product_gallery) {
                 var pgFrame = wp.media.frames.product_gallery;
@@ -298,12 +267,10 @@ function apm_allow_all_media_in_featured_image() {
             }
         }
 
-        // When clicking "Add product gallery images" button, Woo creates the frame
         $(document).on('click', '#add_product_images', function(){
             setTimeout(hookWooGalleryFrame, 100);
         });
 
-        // If already created (reloads, etc.)
         hookWooGalleryFrame();
     });
     </script>
@@ -311,9 +278,6 @@ function apm_allow_all_media_in_featured_image() {
 }
 add_action('admin_footer', 'apm_allow_all_media_in_featured_image');
 
-/**
- * Server-side: Remove restrictive filters for product media queries
- */
 function apm_filter_media_library($query) {
     if (is_admin() && isset($_REQUEST['action']) && $_REQUEST['action'] === 'query-attachments') {
         $post_id = isset($_REQUEST['post_id']) ? (int) $_REQUEST['post_id'] : 0;
@@ -329,115 +293,73 @@ function apm_filter_media_library($query) {
 }
 add_filter('ajax_query_attachments_args', 'apm_filter_media_library', 999);
 
-/**
- * Frontend: Replace WooCommerce product images in output with video/audio players
- * Uses output buffering and regex-based replacement (brittle but contained).
- */
-function apm_start_output_buffer() {
-    if (function_exists('is_product') && is_product()) {
-        ob_start('apm_replace_media_in_output');
-    }
-}
-add_action('template_redirect', 'apm_start_output_buffer', 1);
-
-function apm_replace_media_in_output($buffer) {
-    if (!function_exists('is_product') || !is_product()) {
-        return $buffer;
+function apm_generate_media_html($attachment_id, $is_featured) {
+    $attachment_id = (int) $attachment_id;
+    if ($attachment_id <= 0) {
+        return false;
     }
 
-    global $product;
-    if (!$product || !is_a($product, 'WC_Product')) {
-        return $buffer;
+    $mime_type = get_post_mime_type($attachment_id);
+    if (!$mime_type) {
+        return false;
     }
 
-    $replacements = array();
-
-    // Featured
-    $thumbnail_id = $product->get_image_id();
-    if ($thumbnail_id) {
-        $mime_type = get_post_mime_type($thumbnail_id);
-        if ($mime_type && (strpos($mime_type, 'video') !== false || strpos($mime_type, 'audio') !== false)) {
-            $file_url = wp_get_attachment_url($thumbnail_id);
-            $type     = strpos($mime_type, 'video') !== false ? 'video' : 'audio';
-
-            if ($type === 'video') {
-                $media_tag = '<video width="100%" height="auto" controls preload="metadata" style="display:block;max-width:100%;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '"></video>';
-            } else {
-                $media_tag = '<div style="width:100%;padding:20px;background:#f5f5f5;text-align:center;"><audio controls preload="metadata" style="width:100%;max-width:500px;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '"></audio></div>';
-            }
-
-            $replacements[$thumbnail_id] = array(
-                'media_tag' => $media_tag,
-                'url'       => $file_url,
-                'type'      => $type,
-            );
-        }
+    $type = false;
+    if (strpos($mime_type, 'video') !== false) {
+        $type = 'video';
+    } elseif (strpos($mime_type, 'audio') !== false) {
+        $type = 'audio';
+    } else {
+        return false;
     }
 
-    // Gallery
-    $gallery_ids = $product->get_gallery_image_ids();
-    if (!empty($gallery_ids)) {
-        foreach ($gallery_ids as $attachment_id) {
-            $mime_type = get_post_mime_type($attachment_id);
-            if ($mime_type && (strpos($mime_type, 'video') !== false || strpos($mime_type, 'audio') !== false)) {
-                $file_url = wp_get_attachment_url($attachment_id);
-                $type     = strpos($mime_type, 'video') !== false ? 'video' : 'audio';
-
-                if ($type === 'video') {
-                    $media_tag = '<video width="100%" height="auto" controls preload="metadata" style="display:block;max-width:100%;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '"></video>';
-                } else {
-                    $media_tag = '<div style="width:100%;padding:20px;background:#f5f5f5;text-align:center;"><audio controls preload="metadata" style="width:100%;max-width:500px;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '"></audio></div>';
-                }
-
-                $replacements[$attachment_id] = array(
-                    'media_tag' => $media_tag,
-                    'url'       => $file_url,
-                    'type'      => $type,
-                );
-            }
-        }
+    $file_url = wp_get_attachment_url($attachment_id);
+    if (!$file_url) {
+        return false;
     }
 
-    if (empty($replacements)) {
-        return $buffer;
+    $placeholder_url = apm_get_placeholder_url($type);
+    $alt = get_post_meta($attachment_id, '_wp_attachment_image_alt', true);
+    if (!$alt) {
+        $alt = ucfirst($type);
     }
 
-    foreach ($replacements as $attachment_id => $data) {
-        // Replace gallery image containers with media tag where possible
-        $pattern = '/<div[^>]*class="[^"]*woocommerce-product-gallery__image[^"]*"[^>]*data-thumb-alt="[^"]*"[^>]*>.*?<\/div>/s';
-        $buffer = preg_replace_callback($pattern, function($matches) use ($data) {
-            if (strpos($matches[0], 'data-thumb-alt=""') !== false) {
-                return '<div class="woocommerce-product-gallery__image" data-thumb-alt="">' . $data['media_tag'] . '</div>';
-            }
-            return $matches[0];
-        }, $buffer);
-
-        // Replace anchor-wrapped images for specific attachment file
-        $pattern = '/<div[^>]*class="[^"]*woocommerce-product-gallery__image[^"]*"[^>]*>\s*<a[^>]*href="[^"]*' . preg_quote(basename($data['url']), '/') . '[^"]*"[^>]*>.*?<\/a>\s*<\/div>/s';
-        $buffer  = preg_replace($pattern, '<div class="woocommerce-product-gallery__image">' . $data['media_tag'] . '</div>', $buffer);
-
-        // Replace direct <img> placeholders in anchors
-        $placeholder_url = apm_get_placeholder_url($data['type']);
-        $pattern = '/<a[^>]*href="[^"]*"[^>]*>\s*<img[^>]*src="[^"]*' . preg_quote(basename($placeholder_url), '/') . '[^"]*"[^>]*>\s*<\/a>/s';
-        $buffer  = preg_replace($pattern, $data['media_tag'], $buffer);
-
-        // Remove zoom trigger (not relevant for video/audio)
-        $buffer  = preg_replace('/<a[^>]*class="[^"]*woocommerce-product-gallery__trigger[^"]*"[^>]*>.*?<\/a>/s', '', $buffer);
+    $classes = 'woocommerce-product-gallery__image apm-' . $type;
+    if ($is_featured) {
+        $classes .= ' apm-featured';
     }
 
-    return $buffer;
+    if ($type === 'video') {
+        $media_markup = '<video controls preload="metadata" style="width:100%;height:auto;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '"></video>';
+    } else {
+        $media_markup = '<div class="apm-audio" style="width:100%;padding:20px;background:#f5f5f5;text-align:center;"><audio controls preload="metadata" style="width:100%;max-width:500px;"><source src="' . esc_url($file_url) . '" type="' . esc_attr($mime_type) . '"></audio></div>';
+    }
+
+    return '<div class="' . esc_attr($classes) . '" data-thumb="' . esc_url($placeholder_url) . '" data-thumb-alt="' . esc_attr($alt) . '">' . $media_markup . '</div>';
 }
 
-function apm_end_output_buffer() {
-    if (function_exists('is_product') && is_product() && ob_get_level() > 0) {
-        ob_end_flush();
+function apm_replace_featured_image_with_media($html, $post_id) {
+    $product = wc_get_product($post_id);
+    if (!$product) {
+        return $html;
     }
-}
-add_action('shutdown', 'apm_end_output_buffer', 999);
 
-/**
- * Frontend: pause other media when one plays
- */
+    $attachment_id = $product->get_image_id();
+    if (!$attachment_id) {
+        return $html;
+    }
+
+    $media_html = apm_generate_media_html($attachment_id, true);
+    return $media_html ? $media_html : $html;
+}
+add_filter('woocommerce_single_product_image_html', 'apm_replace_featured_image_with_media', 10, 2);
+
+function apm_replace_gallery_image_with_media($html, $attachment_id) {
+    $media_html = apm_generate_media_html($attachment_id, false);
+    return $media_html ? $media_html : $html;
+}
+add_filter('woocommerce_single_product_image_thumbnail_html', 'apm_replace_gallery_image_with_media', 10, 2);
+
 function apm_media_playback_control() {
     if (!function_exists('is_product') || !is_product()) {
         return;
