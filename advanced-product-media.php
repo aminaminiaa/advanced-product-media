@@ -2,7 +2,7 @@
 /*
 Plugin Name: Advanced Product Media
 Description: Use video and audio files instead of images for WooCommerce product featured media and gallery.
-Version: 1.1.0
+Version: 1.1.1
 Author: Amin Amini
 Requires Plugins: woocommerce
 */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('APM_VERSION', '1.1.0');
+define('APM_VERSION', '1.1.1');
 define('APM_PATH', plugin_dir_path(__FILE__));
 define('APM_URL', plugin_dir_url(__FILE__));
 
@@ -24,12 +24,42 @@ function apm_check_woocommerce() {
 add_action('admin_init', 'apm_check_woocommerce');
 
 function apm_allow_video_audio_upload($mimes) {
-    $mimes['mp4']  = 'video/mp4';
-    $mimes['webm'] = 'video/webm';
-    $mimes['ogg']  = 'video/ogg';
-    $mimes['mp3']  = 'audio/mpeg';
-    $mimes['m4a']  = 'audio/mp4';
-    $mimes['wav']  = 'audio/wav';
+    $video_types = array(
+        'mp4'  => 'video/mp4',
+        'm4v'  => 'video/x-m4v',
+        'mov'  => 'video/quicktime',
+        'wmv'  => 'video/x-ms-wmv',
+        'avi'  => 'video/x-msvideo',
+        'mpg'  => 'video/mpeg',
+        'mpeg' => 'video/mpeg',
+        'webm' => 'video/webm',
+        'ogv'  => 'video/ogg',
+        'ogg'  => 'video/ogg',
+        'flv'  => 'video/x-flv',
+        'mkv'  => 'video/x-matroska'
+    );
+
+    $audio_types = array(
+        'mp3'  => 'audio/mpeg',
+        'm4a'  => 'audio/mp4',
+        'aac'  => 'audio/aac',
+        'ogg'  => 'audio/ogg',
+        'oga'  => 'audio/ogg',
+        'oga'  => 'audio/ogg',
+        'flac' => 'audio/flac',
+        'wav'  => 'audio/wav',
+        'aif'  => 'audio/x-aiff',
+        'aiff' => 'audio/x-aiff',
+        'wma'  => 'audio/x-ms-wma'
+    );
+
+    foreach ($video_types as $ext => $mime) {
+        $mimes[$ext] = $mime;
+    }
+    foreach ($audio_types as $ext => $mime) {
+        $mimes[$ext] = $mime;
+    }
+
     return $mimes;
 }
 add_filter('upload_mimes', 'apm_allow_video_audio_upload');
@@ -187,17 +217,12 @@ function apm_prepare_attachment_for_js($response, $attachment, $meta) {
         return $response;
     }
 
-    $type = false;
-    if (strpos($mime_type, 'video') !== false) {
-        $type = 'video';
-    } elseif (strpos($mime_type, 'audio') !== false) {
-        $type = 'audio';
-    } else {
+    if (strpos($mime_type, 'audio') === false) {
         return $response;
     }
 
-    $placeholder_url  = apm_get_placeholder_url($type);
-    $placeholder_path = apm_get_placeholder_path($type);
+    $placeholder_url  = apm_get_placeholder_url('audio');
+    $placeholder_path = apm_get_placeholder_path('audio');
 
     if (file_exists($placeholder_path)) {
         $image_size = @getimagesize($placeholder_path);
