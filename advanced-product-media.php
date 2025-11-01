@@ -2,7 +2,7 @@
 /*
 Plugin Name: Advanced Product Media
 Description: Use video and audio files instead of images for WooCommerce product featured media and gallery.
-Version: 1.1.1
+Version: 1.2.0
 Author: Amin Amini
 Requires Plugins: woocommerce
 */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('APM_VERSION', '1.1.1');
+define('APM_VERSION', '1.2.0');
 define('APM_PATH', plugin_dir_path(__FILE__));
 define('APM_URL', plugin_dir_url(__FILE__));
 
